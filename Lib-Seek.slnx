@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Lib-SeekApi/Lib-SeekApi.csproj" />
+  </Folder>
+</Solution>

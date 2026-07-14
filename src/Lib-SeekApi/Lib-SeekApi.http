@@ -1,0 +1,6 @@
+@Lib_SeekApi_HostAddress = http://localhost:5247
+
+GET {{Lib_SeekApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
