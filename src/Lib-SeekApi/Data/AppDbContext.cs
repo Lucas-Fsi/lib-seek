@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-// Altere para o namespace correto do seu projeto
 using Lib_SeekApi.Models; 
 
 namespace Lib_SeekApi.Data
