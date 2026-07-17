@@ -8,7 +8,7 @@ namespace Lib_SeekApi.Models
         public string Nome { get; private set; } = null!;
         public string Email { get; private set; } = null!;
         public string Telefone { get; private set; } = null!;
-        public bool Ativo { get; private set; }
+        public bool Ativo { get; private set; } = true;
         public IReadOnlyCollection<Emprestimo> Emprestimos { get; private set; } = new List<Emprestimo>();
 
         protected Usuario() { }
