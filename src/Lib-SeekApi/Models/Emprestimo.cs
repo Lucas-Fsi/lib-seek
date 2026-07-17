@@ -10,6 +10,7 @@
         public DateTime DataEmprestimo { get; private set; }
         public DateTime DataDevolucaoPrevista { get; private set; }
         public DateTime? DataDevolucaoReal { get; private set; }
+        public Multa? Multa { get; private set; }
 
         protected Emprestimo() { }
 
