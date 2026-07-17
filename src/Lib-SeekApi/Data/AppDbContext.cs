@@ -12,6 +12,7 @@ namespace Lib_SeekApi.Data
         public DbSet<Livro> Livros { get; set; }
         public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<Emprestimo> Emprestimos { get; set; }
+        public DbSet<Multa> Multas { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -54,6 +55,22 @@ namespace Lib_SeekApi.Data
                 entity.HasOne<Usuario>()
                       .WithMany()
                       .HasForeignKey(e => e.UsuarioId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Multa>(entity =>
+            {
+                entity.ToTable("multas");
+                entity.HasKey(m => m.Id);
+                entity.Property(m => m.Valor)
+                      .IsRequired()
+                      .HasColumnType("decimal(10,2)");
+                entity.Property(m => m.Status).IsRequired();
+                entity.Property(m => m.DataGeracao).IsRequired();
+                entity.Property(m => m.DataPagamento).IsRequired(false);
+                entity.HasOne(m => m.Emprestimo)
+                      .WithOne(e => e.Multa)
+                      .HasForeignKey<Multa>(m => m.EmprestimoId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
         }
