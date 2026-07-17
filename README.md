@@ -8,3 +8,4 @@ Lib-Seek é um sistema de gerenciamento de biblioteca, capaz de lidar com: cadas
 - Framework: ASP.NET Core
 - ORM: Entity Framework Core
 - Banco de dados: PostgreSQL
+- Containerização: Docker / Docker Compose
