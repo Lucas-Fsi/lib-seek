@@ -1,0 +1,62 @@
+using Microsoft.EntityFrameworkCore;
+// Altere para o namespace correto do seu projeto
+using Lib_SeekApi.Models; 
+
+namespace Lib_SeekApi.Data
+{
+    public class AppDbContext : DbContext
+    {
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        {
+        }
+
+        public DbSet<Livro> Livros { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Emprestimo> Emprestimos { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<Livro>(entity =>
+            {
+                entity.ToTable("livros");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Titulo).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Autor).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Isbn).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.AnoPublicacao).IsRequired();
+                entity.Property(e => e.QuantidadeEstoque).IsRequired();
+            });
+
+            modelBuilder.Entity<Usuario>(entity =>
+            {
+                entity.ToTable("usuarios");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Nome).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Telefone).HasMaxLength(20);
+                entity.Property(e => e.Ativo).HasDefaultValue(true);
+            });
+
+            modelBuilder.Entity<Emprestimo>(entity =>
+            {
+                entity.ToTable("emprestimos");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.DataEmprestimo).IsRequired();
+                entity.Property(e => e.DataDevolucaoPrevista).IsRequired();
+                entity.Property(e => e.DataDevolucaoReal).IsRequired(false);
+
+                entity.HasOne<Livro>()
+                      .WithMany()
+                      .HasForeignKey(e => e.LivroId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne<Usuario>()
+                      .WithMany()
+                      .HasForeignKey(e => e.UsuarioId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+        }
+    }
+}
