@@ -23,12 +23,18 @@ namespace Lib_SeekApi.Models
             Ativo = true;
         }
 
-        public void AtualizarContato(string novoEmail, string novoTelefone)
+        public void AtualizarDetalhes(string nome, string email, string telefone)
         {
-            ValidarEmail(novoEmail);
+            if (string.IsNullOrWhiteSpace(nome))
+            {
+                throw new ArgumentException("O nome é obrigatório.");
+            }
+        
+            ValidarEmail(email);
 
-            Email = novoEmail;
-            Telefone = novoTelefone;
+            Nome = nome;
+            Email = email;
+            Telefone = telefone;
         }
 
         private void ValidarEmail(string email)
@@ -54,6 +60,17 @@ namespace Lib_SeekApi.Models
         public void Ativar()
         {
             Ativo = true;
+        }
+
+        public void AtualizarDados(string nome, string telefone)
+        {
+            if (string.IsNullOrWhiteSpace(nome))
+            {
+                throw new ArgumentException("O nome é obrigatório.");
+            }
+                
+            Nome = nome;
+            Telefone = telefone;
         }
     }
 }
