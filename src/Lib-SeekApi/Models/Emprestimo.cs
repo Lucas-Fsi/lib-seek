@@ -29,24 +29,31 @@
 
         public bool EstaAtrasado(DateTime dataAtual)
         {
-            // se já devolveu, está atrasado?
             if (DataDevolucaoReal.HasValue)
             {
                 return DataDevolucaoReal.Value > DataDevolucaoPrevista;
             }
-            // se não devolveu, está atrasado?
             return dataAtual > DataDevolucaoPrevista;
         }
 
         public int CalcularDiasAtraso(DateTime dataAtual)
         {
-            // se não está atrasado
             if (!EstaAtrasado(dataAtual)) return 0;
 
             DateTime dataDevolvidoOuAtual = DataDevolucaoReal ?? dataAtual;
             TimeSpan diferenca = dataDevolvidoOuAtual - DataDevolucaoPrevista;
 
             return diferenca.Days > 0 ? diferenca.Days : 0;
+        }
+
+        public void RenovarEmprestimo(int diasExtras = 7)
+        {
+            if (DataDevolucaoReal.HasValue)
+            {
+                throw new InvalidOperationException("Não é possível renovar um empréstimo já finalizado.");
+            }
+
+            DataDevolucaoPrevista = DataDevolucaoPrevista.AddDays(diasExtras);
         }
     }
 }

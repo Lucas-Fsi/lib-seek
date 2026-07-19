@@ -44,5 +44,17 @@
 
             QuantidadeEstoque += quantidade;
         }
+
+        public void AtualizarDetalhes(string titulo, string autor, int anoPublicacao)
+        {
+            if (string.IsNullOrWhiteSpace(titulo) || string.IsNullOrWhiteSpace(autor))
+            {
+                throw new ArgumentException("Título e Autor são obrigatórios.");
+            }
+
+            Titulo = titulo;
+            Autor = autor;
+            AnoPublicacao = anoPublicacao;
+        }
     }
 }
