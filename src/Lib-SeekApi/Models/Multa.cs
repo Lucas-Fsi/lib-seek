@@ -52,5 +52,20 @@ namespace Lib_SeekApi.Models
 
             Status = StatusMulta.Cancelada;
         }
+
+        public void AtualizarValor(decimal novoValor)
+        {
+            if (Status != StatusMulta.Pendente)
+            {
+                throw new InvalidOperationException("Só é possível alterar o valor de multas pendentes.");
+            }
+
+            if (novoValor <= 0)
+            {
+                throw new ArgumentException("O novo valor deve ser maior que zero.");
+            }
+
+            Valor = novoValor;
+        }
     }
 }
