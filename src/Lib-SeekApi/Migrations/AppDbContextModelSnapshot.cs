@@ -42,24 +42,14 @@ namespace Lib_SeekApi.Migrations
                     b.Property<int>("LivroId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("LivroId1")
-                        .HasColumnType("integer");
-
                     b.Property<int>("UsuarioId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("UsuarioId1")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("LivroId");
 
-                    b.HasIndex("LivroId1");
-
                     b.HasIndex("UsuarioId");
-
-                    b.HasIndex("UsuarioId1");
 
                     b.ToTable("emprestimos", (string)null);
                 });
@@ -119,14 +109,14 @@ namespace Lib_SeekApi.Migrations
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Valor")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(10,2)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EmprestimoId")
                         .IsUnique();
 
-                    b.ToTable("Multa");
+                    b.ToTable("multas", (string)null);
                 });
 
             modelBuilder.Entity("Lib_SeekApi.Models.Usuario", b =>
@@ -164,28 +154,16 @@ namespace Lib_SeekApi.Migrations
 
             modelBuilder.Entity("Lib_SeekApi.Models.Emprestimo", b =>
                 {
-                    b.HasOne("Lib_SeekApi.Models.Livro", null)
-                        .WithMany()
-                        .HasForeignKey("LivroId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("Lib_SeekApi.Models.Livro", "Livro")
                         .WithMany("Emprestimos")
-                        .HasForeignKey("LivroId1")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Lib_SeekApi.Models.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
+                        .HasForeignKey("LivroId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Lib_SeekApi.Models.Usuario", "Usuario")
                         .WithMany("Emprestimos")
-                        .HasForeignKey("UsuarioId1")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Livro");
@@ -198,7 +176,7 @@ namespace Lib_SeekApi.Migrations
                     b.HasOne("Lib_SeekApi.Models.Emprestimo", "Emprestimo")
                         .WithOne("Multa")
                         .HasForeignKey("Lib_SeekApi.Models.Multa", "EmprestimoId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Emprestimo");

@@ -52,9 +52,7 @@ namespace Lib_SeekApi.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     LivroId = table.Column<int>(type: "integer", nullable: false),
-                    LivroId1 = table.Column<int>(type: "integer", nullable: false),
                     UsuarioId = table.Column<int>(type: "integer", nullable: false),
-                    UsuarioId1 = table.Column<int>(type: "integer", nullable: false),
                     DataEmprestimo = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DataDevolucaoPrevista = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DataDevolucaoReal = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -69,46 +67,34 @@ namespace Lib_SeekApi.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_emprestimos_livros_LivroId1",
-                        column: x => x.LivroId1,
-                        principalTable: "livros",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_emprestimos_usuarios_UsuarioId",
                         column: x => x.UsuarioId,
                         principalTable: "usuarios",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_emprestimos_usuarios_UsuarioId1",
-                        column: x => x.UsuarioId1,
-                        principalTable: "usuarios",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Multa",
+                name: "multas",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     EmprestimoId = table.Column<int>(type: "integer", nullable: false),
-                    Valor = table.Column<decimal>(type: "numeric", nullable: false),
+                    Valor = table.Column<decimal>(type: "numeric(10,2)", nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false),
                     DataGeracao = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DataPagamento = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Multa", x => x.Id);
+                    table.PrimaryKey("PK_multas", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Multa_emprestimos_EmprestimoId",
+                        name: "FK_multas_emprestimos_EmprestimoId",
                         column: x => x.EmprestimoId,
                         principalTable: "emprestimos",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
@@ -117,23 +103,13 @@ namespace Lib_SeekApi.Migrations
                 column: "LivroId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_emprestimos_LivroId1",
-                table: "emprestimos",
-                column: "LivroId1");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_emprestimos_UsuarioId",
                 table: "emprestimos",
                 column: "UsuarioId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_emprestimos_UsuarioId1",
-                table: "emprestimos",
-                column: "UsuarioId1");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Multa_EmprestimoId",
-                table: "Multa",
+                name: "IX_multas_EmprestimoId",
+                table: "multas",
                 column: "EmprestimoId",
                 unique: true);
         }
@@ -142,7 +118,7 @@ namespace Lib_SeekApi.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Multa");
+                name: "multas");
 
             migrationBuilder.DropTable(
                 name: "emprestimos");
