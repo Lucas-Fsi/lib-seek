@@ -1,4 +1,3 @@
-// Controllers/EmprestimosController.cs
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Lib_SeekApi.Data;
@@ -11,23 +10,21 @@ namespace Lib_SeekApi.Controllers
     public class EmprestimosController : ControllerBase
     {
         private readonly AppDbContext _context;
-
-        public EmprestimosController(AppDbContext context)
-        {
-            _context = context;
-        }
+        public EmprestimosController(AppDbContext context) { _context = context; }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Emprestimo>>> GetEmprestimos()
+        public async Task<ActionResult<IEnumerable<EmprestimoResponseDto>>> GetEmprestimos()
         {
-            return await _context.Emprestimos
+            var emprestimos = await _context.Emprestimos
                 .Include(e => e.Livro)
                 .Include(e => e.Usuario)
                 .ToListAsync();
+
+            return Ok(emprestimos.Select(MapToDto));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Emprestimo>> GetEmprestimo(int id)
+        public async Task<ActionResult<EmprestimoResponseDto>> GetEmprestimo(int id)
         {
             var emprestimo = await _context.Emprestimos
                 .Include(e => e.Livro)
@@ -35,84 +32,80 @@ namespace Lib_SeekApi.Controllers
                 .FirstOrDefaultAsync(e => e.Id == id);
 
             if (emprestimo == null) return NotFound();
-            return emprestimo;
+
+            return Ok(MapToDto(emprestimo));
         }
 
-        //Registrar novo empréstimo
         [HttpPost]
-        public async Task<ActionResult<Emprestimo>> PostEmprestimo([FromBody] Emprestimo emprestimoInput)
+        public async Task<ActionResult<EmprestimoResponseDto>> PostEmprestimo([FromBody] CriarEmprestimoDto dto)
         {
-            var livro = await _context.Livros.FindAsync(emprestimoInput.LivroId);
-            if (livro == null)
-                return NotFound("Livro não encontrado.");
-
-            var usuario = await _context.Usuarios.FindAsync(emprestimoInput.UsuarioId);
-            if (usuario == null)
-                return NotFound("Usuário não encontrado.");
-
-            if (!usuario.Ativo)
-                return BadRequest("Usuário inativo não pode realizar empréstimos.");
-
             try
             {
+                var livro = await _context.Livros.FindAsync(dto.LivroId);
+                var usuario = await _context.Usuarios.FindAsync(dto.UsuarioId);
+
+                if (livro == null || usuario == null) return NotFound("Livro ou Usuário não encontrado.");
+                if (livro.QuantidadeEstoque <= 0) return BadRequest("Livro sem estoque.");
+
+                var novoEmprestimo = new Emprestimo(dto.LivroId, dto.UsuarioId);
+                
+                _context.Emprestimos.Add(novoEmprestimo);
                 livro.RegistrarSaida();
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                
+                await _context.SaveChangesAsync();
+                
+                await _context.Entry(novoEmprestimo).Reference(e => e.Livro).LoadAsync();
+                await _context.Entry(novoEmprestimo).Reference(e => e.Usuario).LoadAsync();
 
-            _context.Emprestimos.Add(emprestimoInput);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetEmprestimo), new { id = emprestimoInput.Id }, emprestimoInput);
+                return CreatedAtAction("GetEmprestimo", new { id = novoEmprestimo.Id }, MapToDto(novoEmprestimo));
+            }
+            catch (Exception ex) { return BadRequest(ex.Message); }
         }
 
-        //Registrar devolução
         [HttpPatch("{id}/devolver")]
-        public async Task<IActionResult> DevolverLivro(int id)
+        public async Task<IActionResult> Devolver(int id)
         {
-            var emprestimo = await _context.Emprestimos.FindAsync(id);
+            var emprestimo = await _context.Emprestimos.Include(e => e.Livro).FirstOrDefaultAsync(e => e.Id == id);
             if (emprestimo == null) return NotFound();
 
-            if (emprestimo.DataDevolucaoReal != null)
-                return BadRequest("Este empréstimo já foi devolvido.");
-
             emprestimo.FinalizarEmprestimo(DateTime.UtcNow);
-
-            var livro = await _context.Livros.FindAsync(emprestimo.LivroId);
-            livro?.RegistrarRetorno();
-
+            emprestimo.Livro.RegistrarRetorno();
+            
             await _context.SaveChangesAsync();
             return NoContent();
         }
 
-        [HttpGet("atrasados")]
-        public async Task<ActionResult<IEnumerable<object>>> GetAtrasados()
+        [HttpPatch("{id}/renovar")]
+        public async Task<IActionResult> Renovar(int id, [FromBody] RenovarEmprestimoDto dto)
         {
-            var agora = DateTime.UtcNow;
+            var emprestimo = await _context.Emprestimos.FindAsync(id);
+            if (emprestimo == null) return NotFound();
 
-            var emprestimos = await _context.Emprestimos
-                .Include(e => e.Livro)
-                .Include(e => e.Usuario)
-                .Where(e => e.DataDevolucaoReal == null)
-                .ToListAsync();
-
-            var atrasados = emprestimos
-                .Where(e => e.EstaAtrasado(agora))
-                .Select(e => new
-                {
-                    e.Id,
-                    e.LivroId,
-                    Livro = e.Livro?.Titulo,
-                    e.UsuarioId,
-                    Usuario = e.Usuario?.Nome,
-                    e.DataEmprestimo,
-                    e.DataDevolucaoPrevista,
-                    DiasAtraso = e.CalcularDiasAtraso(agora)
-                });
-
-            return Ok(atrasados);
+            try
+            {
+                emprestimo.RenovarEmprestimo(dto.DiasExtras);
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message); 
+            }
         }
+
+        private static EmprestimoResponseDto MapToDto(Emprestimo e) => new EmprestimoResponseDto(
+            e.Id,
+            new LivroResumidoDto(e.Livro.Id, e.Livro.Titulo),
+            new UsuarioResumidoDto(e.Usuario.Id, e.Usuario.Nome),
+            e.DataEmprestimo,
+            e.DataDevolucaoPrevista,
+            e.DataDevolucaoReal
+        );
     }
+    
+    public record CriarEmprestimoDto(int LivroId, int UsuarioId);
+    public record RenovarEmprestimoDto(int DiasExtras = 7); 
+    public record EmprestimoResponseDto(int Id, LivroResumidoDto Livro, UsuarioResumidoDto Usuario, DateTime DataEmprestimo, DateTime DataDevolucaoPrevista, DateTime? DataDevolucaoReal);
+    public record LivroResumidoDto(int Id, string Titulo);
+    public record UsuarioResumidoDto(int Id, string Nome);
 }

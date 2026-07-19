@@ -1,4 +1,3 @@
-// Controllers/UsuariosController.cs
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Lib_SeekApi.Data;
@@ -12,10 +11,7 @@ namespace Lib_SeekApi.Controllers
     {
         private readonly AppDbContext _context;
 
-        public UsuariosController(AppDbContext context)
-        {
-            _context = context;
-        }
+        public UsuariosController(AppDbContext context) { _context = context; }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Usuario>>> GetUsuarios()
@@ -24,40 +20,62 @@ namespace Lib_SeekApi.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Usuario>> GetUsuario(int id)
+        public async Task<ActionResult<UsuarioPerfilDto>> GetUsuario(int id)
         {
-            var usuario = await _context.Usuarios.FindAsync(id);
+            var usuario = await _context.Usuarios
+                .Include(u => u.Emprestimos)
+                    .ThenInclude(e => e.Livro) 
+                .FirstOrDefaultAsync(u => u.Id == id);
+                
             if (usuario == null) return NotFound();
-            return usuario;
+
+            var historicoDto = usuario.Emprestimos.Select(e => new EmprestimoHistoricoDto(
+                e.Id,
+                e.Livro.Titulo, 
+                e.DataEmprestimo,
+                e.DataDevolucaoPrevista,
+                e.DataDevolucaoReal,
+                e.DataDevolucaoReal.HasValue ? "Devolvido" : (e.DataDevolucaoPrevista < DateTime.UtcNow ? "Atrasado" : "Pendente")
+            )).ToList();
+
+            var perfilDto = new UsuarioPerfilDto(
+                usuario.Id,
+                usuario.Nome,
+                usuario.Email,
+                usuario.Telefone,
+                usuario.Ativo,
+                historicoDto
+            );
+
+            return perfilDto; 
         }
 
         [HttpPost]
-        public async Task<ActionResult<Usuario>> PostUsuario(Usuario usuario)
+        public async Task<ActionResult<Usuario>> PostUsuario([FromBody] CriarUsuarioDto dto)
         {
-            _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetUsuario), new { id = usuario.Id }, usuario);
+            try
+            {
+                var novoUsuario = new Usuario(dto.Nome, dto.Email, dto.Telefone);
+                _context.Usuarios.Add(novoUsuario);
+                await _context.SaveChangesAsync();
+                return CreatedAtAction(nameof(GetUsuario), new { id = novoUsuario.Id }, novoUsuario);
+            }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); } 
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutUsuario(int id, Usuario usuario)
+        public async Task<IActionResult> PutUsuario(int id, [FromBody] AtualizarUsuarioDto dto)
         {
-            if (id != usuario.Id) return BadRequest();
-
-            _context.Entry(usuario).State = EntityState.Modified;
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null) return NotFound("Usuário não encontrado.");
 
             try
             {
+                usuario.AtualizarDetalhes(dto.Nome, dto.Email, dto.Telefone);
                 await _context.SaveChangesAsync();
+                return NoContent();
             }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await _context.Usuarios.AnyAsync(u => u.Id == id))
-                    return NotFound();
-                throw;
-            }
-
-            return NoContent();
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
         }
 
         [HttpPatch("{id}/inativar")]
@@ -70,5 +88,21 @@ namespace Lib_SeekApi.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
+
+        [HttpPatch("{id}/ativar")]
+        public async Task<IActionResult> AtivarUsuario(int id)
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null) return NotFound("Usuário não encontrado.");
+
+            usuario.Ativar();
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
     }
+
+    public record CriarUsuarioDto(string Nome, string Email, string Telefone);
+    public record AtualizarUsuarioDto(string Nome, string Email, string Telefone);
+    public record UsuarioPerfilDto(int Id, string Nome, string Email, string Telefone, bool Ativo, List<EmprestimoHistoricoDto> Historico);
+    public record EmprestimoHistoricoDto(int EmprestimoId, string LivroTitulo, DateTime DataEmprestimo, DateTime DataDevolucaoPrevista, DateTime? DataDevolucaoReal, string Status);
 }

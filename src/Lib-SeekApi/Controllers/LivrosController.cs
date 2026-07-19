@@ -1,4 +1,3 @@
-// Controllers/LivrosController.cs
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Lib_SeekApi.Data;
@@ -12,10 +11,7 @@ namespace Lib_SeekApi.Controllers
     {
         private readonly AppDbContext _context;
 
-        public LivrosController(AppDbContext context)
-        {
-            _context = context;
-        }
+        public LivrosController(AppDbContext context) { _context = context; }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Livro>>> GetLivros()
@@ -24,15 +20,36 @@ namespace Lib_SeekApi.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Livro>> GetLivro(int id)
+        public async Task<ActionResult<LivroDetalheDto>> GetLivro(int id)
         {
-            var livro = await _context.Livros.FindAsync(id);
+            var livro = await _context.Livros
+                .Include(l => l.Emprestimos)
+                    .ThenInclude(e => e.Usuario)
+                .FirstOrDefaultAsync(l => l.Id == id);
+
             if (livro == null) return NotFound();
-            return livro;
+
+            var emprestimosAtuais = livro.Emprestimos
+                .Where(e => !e.DataDevolucaoReal.HasValue)
+                .Select(e => new EmprestimoResumidoDto(
+                    e.Id,
+                    e.Usuario.Nome,
+                    e.DataDevolucaoPrevista,
+                    e.DataDevolucaoPrevista < DateTime.UtcNow ? "Atrasado" : "Em curso"
+                )).ToList();
+
+            var dto = new LivroDetalheDto(
+                livro.Id,
+                livro.Titulo,
+                livro.QuantidadeEstoque,
+                emprestimosAtuais
+            );
+
+            return dto;
         }
 
         [HttpPost]
-        public async Task<ActionResult<Livro>> PostLivro(Livro livro)
+        public async Task<ActionResult<Livro>> PostLivro([FromBody] Livro livro)
         {
             _context.Livros.Add(livro);
             await _context.SaveChangesAsync();
@@ -40,35 +57,26 @@ namespace Lib_SeekApi.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutLivro(int id, Livro livro)
-        {
-            if (id != livro.Id) return BadRequest();
-
-            _context.Entry(livro).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await _context.Livros.AnyAsync(l => l.Id == id))
-                    return NotFound();
-                throw;
-            }
-
-            return NoContent();
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteLivro(int id)
+        public async Task<IActionResult> PutLivro(int id, [FromBody] UpdateLivroDto dto)
         {
             var livro = await _context.Livros.FindAsync(id);
             if (livro == null) return NotFound();
 
-            _context.Livros.Remove(livro);
-            await _context.SaveChangesAsync();
-            return NoContent();
+            try
+            {
+                livro.AtualizarDetalhes(dto.Titulo, dto.Autor, dto.AnoPublicacao);
+                
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
+
+    public record LivroDetalheDto(int Id, string Titulo, int EstoqueAtual, List<EmprestimoResumidoDto> EmprestimosAtuais);
+    public record EmprestimoResumidoDto(int EmprestimoId, string NomeLeitor, DateTime DataDevolucaoPrevista, string Status);
+    public record UpdateLivroDto(string Titulo, string Autor, int AnoPublicacao);
 }
