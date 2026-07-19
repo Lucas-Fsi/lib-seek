@@ -46,16 +46,14 @@ namespace Lib_SeekApi.Data
                 entity.Property(e => e.DataEmprestimo).IsRequired();
                 entity.Property(e => e.DataDevolucaoPrevista).IsRequired();
                 entity.Property(e => e.DataDevolucaoReal).IsRequired(false);
-
-                entity.HasOne<Livro>()
-                      .WithMany()
-                      .HasForeignKey(e => e.LivroId)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne<Usuario>()
-                      .WithMany()
-                      .HasForeignKey(e => e.UsuarioId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Livro)
+                    .WithMany(l => l.Emprestimos)
+                    .HasForeignKey(e => e.LivroId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Usuario)
+                    .WithMany(u => u.Emprestimos)
+                    .HasForeignKey(e => e.UsuarioId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Multa>(entity =>
